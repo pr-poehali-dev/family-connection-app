@@ -1,0 +1,1 @@
+{"tests": [{"name": "OPTIONS CORS", "method": "OPTIONS", "path": "/", "expectedStatus": 200}, {"name": "Unauthorized", "method": "GET", "path": "/?what=chats", "expectedStatus": 401, "expectedBody": {"error": "string"}, "bodyMatcher": "partial"}]}
