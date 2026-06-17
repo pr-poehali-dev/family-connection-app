@@ -2,6 +2,31 @@ import json
 import os
 import psycopg2
 
+INIT_TABLES = [
+    ("CREATE TABLE IF NOT EXISTS users ("
+     "id SERIAL PRIMARY KEY, username VARCHAR(50) UNIQUE NOT NULL, name VARCHAR(100) NOT NULL,"
+     "password_hash VARCHAR(255) NOT NULL, emoji VARCHAR(20) DEFAULT 'smile',"
+     "token VARCHAR(255), online BOOLEAN DEFAULT false,"
+     "last_seen TIMESTAMP DEFAULT NOW(), created_at TIMESTAMP DEFAULT NOW())"),
+    ("CREATE TABLE IF NOT EXISTS chats ("
+     "id SERIAL PRIMARY KEY, name VARCHAR(100), emoji VARCHAR(20) DEFAULT 'chat',"
+     "is_group BOOLEAN DEFAULT false, created_by INTEGER REFERENCES users(id),"
+     "created_at TIMESTAMP DEFAULT NOW())"),
+    ("CREATE TABLE IF NOT EXISTS chat_members ("
+     "id SERIAL PRIMARY KEY, chat_id INTEGER REFERENCES chats(id) ON DELETE CASCADE,"
+     "user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,"
+     "joined_at TIMESTAMP DEFAULT NOW(), UNIQUE(chat_id, user_id))"),
+    ("CREATE TABLE IF NOT EXISTS messages ("
+     "id SERIAL PRIMARY KEY, chat_id INTEGER REFERENCES chats(id) ON DELETE CASCADE,"
+     "user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,"
+     "text TEXT, is_voice BOOLEAN DEFAULT false, voice_len VARCHAR(10),"
+     "created_at TIMESTAMP DEFAULT NOW())"),
+    ("CREATE TABLE IF NOT EXISTS reactions ("
+     "id SERIAL PRIMARY KEY, message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,"
+     "user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,"
+     "emoji VARCHAR(20) NOT NULL, UNIQUE(message_id, user_id))"),
+]
+
 
 def _cors(body: dict, status: int = 200) -> dict:
     return {
@@ -36,6 +61,9 @@ def handler(event: dict, context) -> dict:
 
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
     cur = conn.cursor()
+    for sql in INIT_TABLES:
+        cur.execute(sql)
+    conn.commit()
     user = _auth(cur, event)
     if not user:
         cur.close()
